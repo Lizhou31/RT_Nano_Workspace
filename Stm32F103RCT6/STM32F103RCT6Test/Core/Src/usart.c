@@ -83,9 +83,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /* USART1 interrupt Init */
-    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(USART1_IRQn);
   /* USER CODE BEGIN USART1_MspInit 1 */
 
   /* USER CODE END USART1_MspInit 1 */
@@ -118,5 +115,46 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
+INIT_BOARD_EXPORT(MX_USART1_UART_Init);
+
+
+#ifdef RT_USING_CONSOLE
+void rt_hw_console_output(const char *str)
+{
+    rt_size_t i = 0, size = 0;
+    char a = '\r';
+
+    __HAL_UNLOCK(&huart1);
+
+    size = rt_strlen(str);
+
+    for (i = 0; i < size; i++)
+    {
+        if (*(str + i) == '\n')
+        {
+            HAL_UART_Transmit(&huart1, (uint8_t *)&a, 1, 1);
+        }
+        HAL_UART_Transmit(&huart1, (uint8_t *)(str + i), 1, 1);
+    }
+}
+#endif
+
+#ifdef RT_USING_FINSH
+char rt_hw_console_getchar(void)
+{
+    /* Note: the initial value of ch must < 0 */
+    int ch = -1;
+
+    if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) != RESET)
+    {
+        ch = huart1.Instance->DR & 0xff;
+    }
+    else
+    {
+        rt_thread_mdelay(10);
+    }
+    return ch;
+}
+#endif
 
 /* USER CODE END 1 */

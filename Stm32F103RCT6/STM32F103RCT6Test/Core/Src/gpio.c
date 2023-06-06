@@ -49,5 +49,5 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 2 */
-
+INIT_BOARD_EXPORT(MX_GPIO_Init);
 /* USER CODE END 2 */
