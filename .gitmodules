@@ -1,0 +1,3 @@
+[submodule "modules/rtthread-nano"]
+	path = modules/rtthread-nano
+	url = https://github.com/Lizhou31/rtthread-nano.git
