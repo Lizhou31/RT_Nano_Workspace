@@ -21,7 +21,10 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-
+#define UART_RX_BUF_LEN 16
+rt_uint8_t uart_rx_buf[UART_RX_BUF_LEN] = {0};
+struct rt_ringbuffer uart_rxcb;
+static struct rt_semaphore shell_rx_sem;
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -32,6 +35,12 @@ void MX_USART1_UART_Init(void)
 {
 
   /* USER CODE BEGIN USART1_Init 0 */
+
+  /* initialize ringbuffer */
+  rt_ringbuffer_init(&uart_rxcb, uart_rx_buf, UART_RX_BUF_LEN);
+
+  /* initialize rx semaphore*/
+  rt_sem_init(&(shell_rx_sem), "shell_rx", 0, 0);
 
   /* USER CODE END USART1_Init 0 */
 
@@ -51,7 +60,7 @@ void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
-
+  __HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE);//启动串口中断
   /* USER CODE END USART1_Init 2 */
 
 }
@@ -124,7 +133,7 @@ void rt_hw_console_output(const char *str)
     rt_size_t i = 0, size = 0;
     char a = '\r';
 
-    __HAL_UNLOCK(&huart1);
+    // __HAL_UNLOCK(&huart1);
 
     size = rt_strlen(str);
 
@@ -143,17 +152,45 @@ void rt_hw_console_output(const char *str)
 char rt_hw_console_getchar(void)
 {
     /* Note: the initial value of ch must < 0 */
-    int ch = -1;
+    char ch = -1;
 
-    if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) != RESET)
+    /* 从 ringbuffer 中拿出数据 */
+    while (rt_ringbuffer_getchar(&uart_rxcb, (rt_uint8_t *)&ch) != 1)
     {
-        ch = huart1.Instance->DR & 0xff;
-    }
-    else
-    {
-        rt_thread_mdelay(10);
+        rt_sem_take(&shell_rx_sem, RT_WAITING_FOREVER);
     }
     return ch;
+}
+
+void USART1_IRQHandler(void)
+{
+    /* Note: the initial value of ch must < 0 */
+    int ch = -1;
+    /* enter interrupt */
+    rt_interrupt_enter();          //在中断中一定要调用这对函数，进入中断
+
+    if ((__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) != RESET) &&
+        (__HAL_UART_GET_IT_SOURCE(&huart1, UART_IT_RXNE) != RESET))
+    {
+        while (1)
+        {
+            ch = -1;
+            if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) != RESET)
+            {
+                ch =  huart1.Instance->DR & 0xff;
+            }
+            if (ch == -1)
+            {
+                break;
+            }
+            /* 读取到数据，将数据存入 ringbuffer */
+            rt_ringbuffer_putchar(&uart_rxcb, ch);
+        }
+        rt_sem_release(&shell_rx_sem);
+    }
+
+    /* leave interrupt */
+    rt_interrupt_leave();    //在中断中一定要调用这对函数，离开中断
 }
 #endif
 
