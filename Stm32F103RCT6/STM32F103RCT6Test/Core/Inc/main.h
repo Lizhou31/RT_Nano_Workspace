@@ -32,6 +32,7 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "rtthread.h"
+#include "RC.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

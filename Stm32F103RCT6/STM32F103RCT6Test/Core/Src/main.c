@@ -44,22 +44,44 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+extern UART_HandleTypeDef huart2;
+extern DMA_HandleTypeDef hdma_usart2_rx;
+SBUS_Handler sbushandler;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int main(void){
-  while(1){
-    rt_thread_mdelay(100);
+static void sbus_fetch(SBUS_Handler *handler)
+{
+  HAL_UART_Receive_IT(&huart2, (uint8_t *)(handler->rx_data.raw_data), 25);
+}
+int check_5s_RC_Signal(void)
+{
+  int count = 0;
+  while(count++ < 5)
+  {
+    for (uint8_t i = 0; i < 16; i++)
+    {
+      rt_kprintf("%d ", sbushandler.rx_data.channel_decoded[i]);
+    }
+    rt_kprintf("\n");
+    rt_thread_mdelay(1000);
   }
+}
+MSH_CMD_EXPORT(check_5s_RC_Signal, check RC signal);
+
+int main(void)
+{
+  sbushandler.sbus_get_tick = rt_tick_get;
+  sbushandler.sbus_raw_fetch = sbus_fetch;
+  SBUS_DEFINE(sbus, &sbushandler);
+  sbushandler.sbus_raw_fetch(&sbushandler);
+  __HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
 }
 /* USER CODE END 0 */
 
@@ -111,19 +133,7 @@ void SystemClock_Config(void)
   HAL_RCC_EnableCSS();
 }
 
-/**
-  * @brief NVIC Configuration.
-  * @retval None
-  */
-static void MX_NVIC_Init(void)
-{
-  /* USART1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(USART1_IRQn);
-}
-
 /* USER CODE BEGIN 4 */
-INIT_BOARD_EXPORT(MX_NVIC_Init);
 /* USER CODE END 4 */
 
 /**
