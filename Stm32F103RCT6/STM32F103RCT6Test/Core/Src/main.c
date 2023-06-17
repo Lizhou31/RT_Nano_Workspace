@@ -33,6 +33,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define THREAD_PRIORITY 9
+#define THREAD_TIMESLICE 5
 
 /* USER CODE END PD */
 
@@ -47,6 +49,8 @@
 extern UART_HandleTypeDef huart2;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 SBUS_Handler sbushandler;
+
+struct rt_event event;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -63,7 +67,7 @@ static void sbus_fetch(SBUS_Handler *handler)
 int check_5s_RC_Signal(void)
 {
   int count = 0;
-  while(count++ < 5)
+  while (count++ < 5)
   {
     for (uint8_t i = 0; i < 16; i++)
     {
@@ -75,6 +79,24 @@ int check_5s_RC_Signal(void)
 }
 MSH_CMD_EXPORT(check_5s_RC_Signal, check RC signal);
 
+ALIGN(RT_ALIGN_SIZE)
+static char IO_thread_stack[1024];
+static struct rt_thread IO_thread;
+
+static void IO_Process(void *param)
+{
+  rt_uint32_t e;
+  while (1)
+  {
+    if (rt_event_recv(&event, (EVENT_FLAG2),
+                      RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
+                      RT_WAITING_FOREVER, &e) == RT_EOK)
+    {
+      sbushandler.sbus_decode(&sbushandler);
+    }
+  }
+}
+
 int main(void)
 {
   sbushandler.sbus_get_tick = rt_tick_get;
@@ -82,6 +104,24 @@ int main(void)
   SBUS_DEFINE(sbus, &sbushandler);
   sbushandler.sbus_raw_fetch(&sbushandler);
   __HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
+
+  /* 初始化事件对象 */
+  rt_err_t result;
+  result = rt_event_init(&event, "event", RT_IPC_FLAG_PRIO);
+  if (result != RT_EOK)
+  {
+    rt_kprintf("init event failed.\n");
+    return -1;
+  }
+
+  rt_thread_init(&IO_thread,
+                 "IO_thread",
+                 IO_Process,
+                 RT_NULL,
+                 &IO_thread_stack[0],
+                 sizeof(IO_thread_stack),
+                 THREAD_PRIORITY - 1, THREAD_TIMESLICE);
+  rt_thread_startup(&IO_thread);
 }
 /* USER CODE END 0 */
 
@@ -116,8 +156,7 @@ void SystemClock_Config(void)
 
   /** Initializes the CPU, AHB and APB buses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -149,7 +188,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM1) {
+  if (htim->Instance == TIM1)
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -172,7 +212,7 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

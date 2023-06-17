@@ -60,7 +60,7 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 
 /* USER CODE BEGIN Private defines */
-
+#define EVENT_FLAG2 (1 << 2)
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
