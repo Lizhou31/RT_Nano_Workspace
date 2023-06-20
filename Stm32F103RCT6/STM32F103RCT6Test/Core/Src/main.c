@@ -33,7 +33,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define THREAD_PRIORITY 9
+#define DECODE_THREAD_PRIORITY 9
+#define PERIODIC_OUTPUT_THREAD_PRIORITY 10
 #define THREAD_TIMESLICE 5
 
 /* USER CODE END PD */
@@ -50,7 +51,7 @@ extern UART_HandleTypeDef huart2;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 SBUS_Handler sbushandler;
 
-struct rt_event event;
+struct rt_event io_event;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,36 +65,62 @@ static void sbus_fetch(SBUS_Handler *handler)
 {
   HAL_UART_Receive_IT(&huart2, (uint8_t *)(handler->rx_data.raw_data), 25);
 }
+
 int check_5s_RC_Signal(void)
 {
   int count = 0;
   while (count++ < 5)
   {
-    for (uint8_t i = 0; i < 16; i++)
+    for (uint8_t i = 0; i < 8; i++)
     {
       rt_kprintf("%d ", sbushandler.rx_data.channel_decoded[i]);
     }
     rt_kprintf("\n");
     rt_thread_mdelay(1000);
   }
+  return RT_EOK;
 }
 MSH_CMD_EXPORT(check_5s_RC_Signal, check RC signal);
 
 ALIGN(RT_ALIGN_SIZE)
-static char IO_thread_stack[1024];
-static struct rt_thread IO_thread;
-
-static void IO_Process(void *param)
+static char rc_decode_stack[1024];
+static struct rt_thread rc_decode_thread;
+static void rc_decode(void *param)
 {
   rt_uint32_t e;
   while (1)
   {
-    if (rt_event_recv(&event, (EVENT_FLAG2),
-                      RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
+    if (rt_event_recv(&io_event, (rc_interrupt_event | rc_output_completed_event),
+                      RT_EVENT_FLAG_AND | RT_EVENT_FLAG_CLEAR,
                       RT_WAITING_FOREVER, &e) == RT_EOK)
     {
       sbushandler.sbus_decode(&sbushandler);
     }
+  }
+}
+
+// #define OUTPUT_DEBUG
+ALIGN(RT_ALIGN_SIZE)
+static char periodic_output_stack[1024];
+static struct rt_thread rc_p_output_thread;
+static void periodic_output(void *param)
+{
+  int count = 0;
+  while (1)
+  {
+#ifdef OUTPUT_DEBUG
+    rt_kprintf("%d ", sbushandler.rx_data.channel_decoded[count]);
+#endif
+    count++;
+    if (count >= 8)
+    {
+      count = 0;
+#ifdef OUTPUT_DEBUG
+      rt_kprintf("\n");
+#endif
+      rt_event_send(&io_event, rc_output_completed_event);
+    }
+    rt_thread_mdelay(32);
   }
 }
 
@@ -107,21 +134,30 @@ int main(void)
 
   /* 初始化事件对象 */
   rt_err_t result;
-  result = rt_event_init(&event, "event", RT_IPC_FLAG_PRIO);
+  result = rt_event_init(&io_event, "event", RT_IPC_FLAG_PRIO);
   if (result != RT_EOK)
   {
     rt_kprintf("init event failed.\n");
     return -1;
   }
 
-  rt_thread_init(&IO_thread,
-                 "IO_thread",
-                 IO_Process,
+  rt_thread_init(&rc_decode_thread,
+                 "rc_decode",
+                 rc_decode,
                  RT_NULL,
-                 &IO_thread_stack[0],
-                 sizeof(IO_thread_stack),
-                 THREAD_PRIORITY - 1, THREAD_TIMESLICE);
-  rt_thread_startup(&IO_thread);
+                 &rc_decode_stack[0],
+                 sizeof(rc_decode_stack),
+                 DECODE_THREAD_PRIORITY, THREAD_TIMESLICE);
+  rt_thread_startup(&rc_decode_thread);
+
+  rt_thread_init(&rc_p_output_thread,
+                 "rc_output",
+                 periodic_output,
+                 RT_NULL,
+                 &periodic_output_stack[0],
+                 sizeof(periodic_output_stack),
+                 PERIODIC_OUTPUT_THREAD_PRIORITY, THREAD_TIMESLICE);
+  rt_thread_startup(&rc_p_output_thread);
 }
 /* USER CODE END 0 */
 

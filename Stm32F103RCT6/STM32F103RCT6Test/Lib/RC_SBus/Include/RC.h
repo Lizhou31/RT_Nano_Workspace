@@ -14,16 +14,16 @@
  * @brief define range mapping here, -+100% -> 1000..2000
  *
  */
-#define SBUS_TARGET_MIN 1000
-#define SBUS_TARGET_MAX 2000
+#define SBUS_TARGET_MIN 0
+#define SBUS_TARGET_MAX 255
 #define SBUS_TARGET_RANGE (SBUS_TARGET_MAX - SBUS_TARGET_MIN)
 
 /**
  * @brief define futaba sbus range 100% 352~1696
  * @brief define skydroid subus range 100% 282~1722
  */
-#define SBUS_RANGE_MIN 352
-#define SBUS_RANGE_MAX 1696
+#define SBUS_RANGE_MIN 282
+#define SBUS_RANGE_MAX 1722
 #define SBUS_RANGE_RANGE (SBUS_RANGE_MAX - SBUS_RANGE_MIN)
 
 /**
