@@ -32,6 +32,7 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "rtthread.h"
+#include "RC.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -59,7 +60,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 
 /* USER CODE BEGIN Private defines */
-
+#define rc_interrupt_event (1 << 2)
+#define rc_output_completed_event (1 << 3)
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

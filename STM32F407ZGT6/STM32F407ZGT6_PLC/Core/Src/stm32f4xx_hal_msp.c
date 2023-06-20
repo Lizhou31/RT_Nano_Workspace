@@ -72,6 +72,8 @@ void HAL_MspInit(void)
   /* System interrupt init*/
 
   /* Peripheral interrupt init */
+  /* FPU_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(FPU_IRQn, 0, 0);
 
   /* USER CODE BEGIN MspInit 1 */
 
