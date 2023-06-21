@@ -58,6 +58,28 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define RC_channel_0_Pin GPIO_PIN_5
+#define RC_channel_0_GPIO_Port GPIOG
+#define RC_channel_1_Pin GPIO_PIN_6
+#define RC_channel_1_GPIO_Port GPIOG
+#define RC_channel_2_Pin GPIO_PIN_7
+#define RC_channel_2_GPIO_Port GPIOG
+#define RC_channel_3_Pin GPIO_PIN_8
+#define RC_channel_3_GPIO_Port GPIOG
+#define RC_channel_4_Pin GPIO_PIN_8
+#define RC_channel_4_GPIO_Port GPIOA
+#define RC_channel_5_Pin GPIO_PIN_3
+#define RC_channel_5_GPIO_Port GPIOD
+#define RC_channel_6_Pin GPIO_PIN_4
+#define RC_channel_6_GPIO_Port GPIOD
+#define RC_channel_7_Pin GPIO_PIN_7
+#define RC_channel_7_GPIO_Port GPIOD
+#define RC_channel_8_Pin GPIO_PIN_9
+#define RC_channel_8_GPIO_Port GPIOG
+#define RC_channel_9_Pin GPIO_PIN_10
+#define RC_channel_9_GPIO_Port GPIOG
+#define RC_channel_10_Pin GPIO_PIN_12
+#define RC_channel_10_GPIO_Port GPIOG
 
 /* USER CODE BEGIN Private defines */
 #define rc_interrupt_event (1 << 2)

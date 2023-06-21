@@ -107,16 +107,43 @@ static char periodic_output_stack[1024];
 static struct rt_thread rc_periodic_output_thread;
 static char periodic_output(void *param)
 {
-  int count = 0;
+  uint8_t channel = 0;
   while (1)
   {
+    /*******************************************************************************/
+    /*
+     * Channel 0 ~ 7 Output Channel Values. Channel 8 ~ 10 Output Channel info.
+     *
+     * For example : output Channel is 3, value is 128
+     *                                                         
+     *         LSB {            128               }{     3      } MSB
+     * Channel     | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+     * Output        0   0   0   0   0   0   0   1   1   1    0
+     *
+     */
+    /*******************************************************************************/
+    
+    uint8_t value = sbushandler.rx_data.channel_decoded[channel];
+    rt_enter_critical();
+    HAL_GPIO_WritePin(RC_channel_8_GPIO_Port, RC_channel_8_Pin, channel % 2);
+    HAL_GPIO_WritePin(RC_channel_9_GPIO_Port, RC_channel_9_Pin, (channel >> 1) % 2);
+    HAL_GPIO_WritePin(RC_channel_10_GPIO_Port, RC_channel_10_Pin, (channel >> 2) % 2);
+    HAL_GPIO_WritePin(RC_channel_0_GPIO_Port, RC_channel_0_Pin, value % 2);
+    HAL_GPIO_WritePin(RC_channel_1_GPIO_Port, RC_channel_1_Pin, (value >> 1) % 2);
+    HAL_GPIO_WritePin(RC_channel_2_GPIO_Port, RC_channel_2_Pin, (value >> 2) % 2);
+    HAL_GPIO_WritePin(RC_channel_3_GPIO_Port, RC_channel_3_Pin, (value >> 3) % 2);
+    HAL_GPIO_WritePin(RC_channel_4_GPIO_Port, RC_channel_4_Pin, (value >> 4) % 2);
+    HAL_GPIO_WritePin(RC_channel_5_GPIO_Port, RC_channel_5_Pin, (value >> 5) % 2);
+    HAL_GPIO_WritePin(RC_channel_6_GPIO_Port, RC_channel_6_Pin, (value >> 6) % 2);
+    HAL_GPIO_WritePin(RC_channel_7_GPIO_Port, RC_channel_7_Pin, (value >> 7) % 2);
+    rt_exit_critical();
 #ifdef DEBUG_PERIODIC_OUTPUT
-    rt_kprintf("%d ", sbushandler.rx_data.channel_decoded[count]);
+    rt_kprintf("%d ", value);
 #endif
-    count++;
-    if (count >= 8)
+    channel++;
+    if (channel >= 8)
     {
-      count = 0;
+      channel = 0;
 #ifdef DEBUG_PERIODIC_OUTPUT
       rt_kprintf("\n");
 #endif
@@ -152,7 +179,6 @@ int main(void)
                  &rc_decode_stack[0],
                  sizeof(rc_decode_stack),
                  DECODE_THREAD_PRIORITY, THREAD_TIMESICE);
-
   rt_thread_startup(&rc_decode_thread);
 
   /* Periodic Output Thread */
