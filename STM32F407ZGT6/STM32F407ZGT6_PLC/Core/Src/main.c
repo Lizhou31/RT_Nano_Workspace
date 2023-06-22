@@ -34,9 +34,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define EMERGENCY_THREAD_PRIORITY 3
 #define DECODE_THREAD_PRIORITY 9
 #define PERIODIC_OUTPUT_THREAD_PRIORITY 10
-#define THREAD_TIMESICE 5
+#define THREAD_TIMESLICE 5
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,7 +51,7 @@
 extern UART_HandleTypeDef huart2;
 SBUS_Handler sbushandler;
 
-struct rt_event rc_event;
+struct rt_event control_event;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -84,14 +85,14 @@ MSH_CMD_EXPORT(check_5s_RC_signal, check RC signal);
 
 /* Decode Thread */
 ALIGN(RT_ALIGN_SIZE)
-static char rc_decode_stack[1024];
+static char rc_decode_stack[512];
 static struct rt_thread rc_decode_thread;
 static void rc_decode(void *param)
 {
   rt_uint32_t e;
   while (1)
   {
-    if (rt_event_recv(&rc_event, (rc_interrupt_event | rc_output_completed_event),
+    if (rt_event_recv(&control_event, (rc_interrupt_event | rc_output_completed_event),
                       (RT_EVENT_FLAG_AND | RT_EVENT_FLAG_CLEAR),
                       RT_WAITING_FOREVER, &e) == RT_EOK)
     {
@@ -103,9 +104,9 @@ static void rc_decode(void *param)
 /* Periodic Output Thread */
 // #define DEBUG_PERIODIC_OUTPUT
 ALIGN(RT_ALIGN_SIZE)
-static char periodic_output_stack[1024];
+static char periodic_output_stack[512];
 static struct rt_thread rc_periodic_output_thread;
-static char periodic_output(void *param)
+static void periodic_output(void *param)
 {
   uint8_t channel = 0;
   while (1)
@@ -115,14 +116,14 @@ static char periodic_output(void *param)
      * Channel 0 ~ 7 Output Channel Values. Channel 8 ~ 10 Output Channel info.
      *
      * For example : output Channel is 3, value is 128
-     *                                                         
+     *
      *         LSB {            128               }{     3      } MSB
      * Channel     | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
      * Output        0   0   0   0   0   0   0   1   1   1    0
      *
      */
     /*******************************************************************************/
-    
+
     uint8_t value = sbushandler.rx_data.channel_decoded[channel];
     rt_enter_critical();
     HAL_GPIO_WritePin(RC_channel_8_GPIO_Port, RC_channel_8_Pin, channel % 2);
@@ -147,9 +148,40 @@ static char periodic_output(void *param)
 #ifdef DEBUG_PERIODIC_OUTPUT
       rt_kprintf("\n");
 #endif
-      rt_event_send(&rc_event, rc_output_completed_event);
+      rt_event_send(&control_event, rc_output_completed_event);
     }
     rt_thread_mdelay(32);
+  }
+}
+
+ALIGN(RT_ALIGN_SIZE)
+static char emergency_interrupt_stack[512];
+static struct rt_thread emergency_interrupt_thread;
+static void emergency_process(void *param)
+{
+  rt_uint32_t e;
+  while (1)
+  {
+    if (rt_event_recv(&control_event,
+                      emergency_trigger_event | emergency_clear_event,
+                      RT_EVENT_FLAG_OR,
+                      RT_WAITING_FOREVER, &e) == RT_EOK)
+    {
+      if (control_event.set & emergency_trigger_event)
+      {
+        rt_enter_critical();
+        HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, SET);
+        control_event.set &= ~emergency_trigger_event;
+        rt_exit_critical();
+      }
+      else if (control_event.set & emergency_clear_event)
+      {
+        rt_enter_critical();
+        HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, RESET);
+        control_event.set &= ~emergency_clear_event;
+        rt_exit_critical();
+      }
+    }
   }
 }
 
@@ -163,7 +195,7 @@ int main(void)
 
   /* initialize event object */
   rt_err_t result;
-  result = rt_event_init(&rc_event, "rc_event", RT_IPC_FLAG_PRIO);
+  result = rt_event_init(&control_event, "control_event", RT_IPC_FLAG_PRIO);
   if (result != RT_EOK)
   {
     rt_kprintf("init event failed. \n");
@@ -178,7 +210,7 @@ int main(void)
                  RT_NULL,
                  &rc_decode_stack[0],
                  sizeof(rc_decode_stack),
-                 DECODE_THREAD_PRIORITY, THREAD_TIMESICE);
+                 DECODE_THREAD_PRIORITY, THREAD_TIMESLICE);
   rt_thread_startup(&rc_decode_thread);
 
   /* Periodic Output Thread */
@@ -188,8 +220,18 @@ int main(void)
                  RT_NULL,
                  &periodic_output_stack[0],
                  sizeof(periodic_output_stack),
-                 PERIODIC_OUTPUT_THREAD_PRIORITY, THREAD_TIMESICE);
+                 PERIODIC_OUTPUT_THREAD_PRIORITY, THREAD_TIMESLICE);
   rt_thread_startup(&rc_periodic_output_thread);
+
+  /* Emergency Process */
+  rt_thread_init(&emergency_interrupt_thread,
+                 "Emergency",
+                 emergency_process,
+                 RT_NULL,
+                 &emergency_interrupt_stack[0],
+                 sizeof(emergency_interrupt_stack),
+                 EMERGENCY_THREAD_PRIORITY, THREAD_TIMESLICE);
+  rt_thread_startup(&emergency_interrupt_thread);
 }
 /* USER CODE END 0 */
 

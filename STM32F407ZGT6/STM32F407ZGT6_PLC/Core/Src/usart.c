@@ -26,7 +26,7 @@ rt_uint8_t uart_rx_buf[UART_RX_BUF_LEN] = {0};
 struct rt_ringbuffer uart_rxcb;
 static struct rt_semaphore shell_rx_sem;
 extern SBUS_Handler sbushandler;
-extern struct rt_event rc_event;
+extern struct rt_event control_event;
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -283,7 +283,7 @@ void USART2_IRQHandler(void){
     __HAL_UART_CLEAR_IDLEFLAG(&huart2);
     if (0x0F == sbushandler.rx_data.raw_data[0])
     {
-      rt_event_send(&rc_event, rc_interrupt_event);
+      rt_event_send(&control_event, rc_interrupt_event);
     }
     sbushandler.sbus_raw_fetch(&sbushandler);
   }
