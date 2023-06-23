@@ -50,6 +50,7 @@
 /* USER CODE BEGIN PV */
 extern UART_HandleTypeDef huart2;
 SBUS_Handler sbushandler;
+uint8_t emergency_flag = 0;
 
 struct rt_event control_event;
 /* USER CODE END PV */
@@ -123,9 +124,13 @@ static void periodic_output(void *param)
      *
      */
     /*******************************************************************************/
-
+    if(emergency_flag) continue;
     uint8_t value = sbushandler.rx_data.channel_decoded[channel];
     rt_enter_critical();
+    if (6 == channel)
+    {
+      HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, value);
+    }
     HAL_GPIO_WritePin(RC_channel_8_GPIO_Port, RC_channel_8_Pin, channel % 2);
     HAL_GPIO_WritePin(RC_channel_9_GPIO_Port, RC_channel_9_Pin, (channel >> 1) % 2);
     HAL_GPIO_WritePin(RC_channel_10_GPIO_Port, RC_channel_10_Pin, (channel >> 2) % 2);
@@ -154,6 +159,8 @@ static void periodic_output(void *param)
   }
 }
 
+// #define DEBUG_EMERGENCY
+
 ALIGN(RT_ALIGN_SIZE)
 static char emergency_interrupt_stack[512];
 static struct rt_thread emergency_interrupt_thread;
@@ -170,16 +177,24 @@ static void emergency_process(void *param)
       if (control_event.set & emergency_trigger_event)
       {
         rt_enter_critical();
-        HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, SET);
+        HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, RESET);
         control_event.set &= ~emergency_trigger_event;
+        emergency_flag = 1;
         rt_exit_critical();
+#ifdef DEBUG_EMERGENCY
+        rt_kprintf("Trigger");
+#endif
       }
       else if (control_event.set & emergency_clear_event)
       {
         rt_enter_critical();
-        HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, RESET);
+        HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, SET);
         control_event.set &= ~emergency_clear_event;
+        emergency_flag = 0;
         rt_exit_critical();
+#ifdef DEBUG_EMERGENCY
+        rt_kprintf("Clear");
+#endif
       }
     }
   }
