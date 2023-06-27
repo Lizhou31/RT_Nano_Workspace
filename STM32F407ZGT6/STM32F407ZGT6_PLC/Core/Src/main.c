@@ -170,7 +170,7 @@ static void emergency_process(void *param)
   while (1)
   {
     if (rt_event_recv(&control_event,
-                      emergency_trigger_event | emergency_clear_event,
+                      emergency_trigger_event,
                       RT_EVENT_FLAG_OR,
                       RT_WAITING_FOREVER, &e) == RT_EOK)
     {
@@ -178,22 +178,12 @@ static void emergency_process(void *param)
       {
         rt_enter_critical();
         HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, RESET);
+        HAL_GPIO_WritePin(Solenoid_valve_output_GPIO_Port,Solenoid_valve_output_Pin, RESET);
         control_event.set &= ~emergency_trigger_event;
         emergency_flag = 1;
         rt_exit_critical();
 #ifdef DEBUG_EMERGENCY
         rt_kprintf("Trigger");
-#endif
-      }
-      else if (control_event.set & emergency_clear_event)
-      {
-        rt_enter_critical();
-        HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, SET);
-        control_event.set &= ~emergency_clear_event;
-        emergency_flag = 0;
-        rt_exit_critical();
-#ifdef DEBUG_EMERGENCY
-        rt_kprintf("Clear");
 #endif
       }
     }
