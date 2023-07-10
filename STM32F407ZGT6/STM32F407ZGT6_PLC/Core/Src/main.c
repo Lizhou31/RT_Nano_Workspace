@@ -127,9 +127,9 @@ static void periodic_output(void *param)
     if(emergency_flag) continue;
     uint8_t value = sbushandler.rx_data.channel_decoded[channel];
     rt_enter_critical();
-    if (6 == channel)
+    if (4 == channel)
     {
-      HAL_GPIO_WritePin(Solenoid_valve_output_GPIO_Port, Solenoid_valve_output_Pin, value);
+      HAL_GPIO_WritePin(Solenoid_valve_output_GPIO_Port, Solenoid_valve_output_Pin, !value);
     }
     HAL_GPIO_WritePin(RC_channel_8_GPIO_Port, RC_channel_8_Pin, channel % 2);
     HAL_GPIO_WritePin(RC_channel_9_GPIO_Port, RC_channel_9_Pin, (channel >> 1) % 2);
@@ -155,7 +155,7 @@ static void periodic_output(void *param)
 #endif
       rt_event_send(&control_event, rc_output_completed_event);
     }
-    rt_thread_mdelay(32);
+    rt_thread_mdelay(6);
   }
 }
 
