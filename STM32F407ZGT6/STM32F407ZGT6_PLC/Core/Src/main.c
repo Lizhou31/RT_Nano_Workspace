@@ -124,36 +124,38 @@ static void periodic_output(void *param)
      *
      */
     /*******************************************************************************/
-    if(emergency_flag) continue;
-    uint8_t value = sbushandler.rx_data.channel_decoded[channel];
-    rt_enter_critical();
-    if (4 == channel)
+    if (!emergency_flag)
     {
-      HAL_GPIO_WritePin(Solenoid_valve_output_GPIO_Port, Solenoid_valve_output_Pin, !value);
-    }
-    HAL_GPIO_WritePin(RC_channel_8_GPIO_Port, RC_channel_8_Pin, channel % 2);
-    HAL_GPIO_WritePin(RC_channel_9_GPIO_Port, RC_channel_9_Pin, (channel >> 1) % 2);
-    HAL_GPIO_WritePin(RC_channel_10_GPIO_Port, RC_channel_10_Pin, (channel >> 2) % 2);
-    HAL_GPIO_WritePin(RC_channel_0_GPIO_Port, RC_channel_0_Pin, value % 2);
-    HAL_GPIO_WritePin(RC_channel_1_GPIO_Port, RC_channel_1_Pin, (value >> 1) % 2);
-    HAL_GPIO_WritePin(RC_channel_2_GPIO_Port, RC_channel_2_Pin, (value >> 2) % 2);
-    HAL_GPIO_WritePin(RC_channel_3_GPIO_Port, RC_channel_3_Pin, (value >> 3) % 2);
-    HAL_GPIO_WritePin(RC_channel_4_GPIO_Port, RC_channel_4_Pin, (value >> 4) % 2);
-    HAL_GPIO_WritePin(RC_channel_5_GPIO_Port, RC_channel_5_Pin, (value >> 5) % 2);
-    HAL_GPIO_WritePin(RC_channel_6_GPIO_Port, RC_channel_6_Pin, (value >> 6) % 2);
-    HAL_GPIO_WritePin(RC_channel_7_GPIO_Port, RC_channel_7_Pin, (value >> 7) % 2);
-    rt_exit_critical();
+      uint8_t value = sbushandler.rx_data.channel_decoded[channel];
+      rt_enter_critical();
+      if (4 == channel)
+      {
+        HAL_GPIO_WritePin(Solenoid_valve_output_GPIO_Port, Solenoid_valve_output_Pin, !value);
+      }
+      HAL_GPIO_WritePin(RC_channel_8_GPIO_Port, RC_channel_8_Pin, channel % 2);
+      HAL_GPIO_WritePin(RC_channel_9_GPIO_Port, RC_channel_9_Pin, (channel >> 1) % 2);
+      HAL_GPIO_WritePin(RC_channel_10_GPIO_Port, RC_channel_10_Pin, (channel >> 2) % 2);
+      HAL_GPIO_WritePin(RC_channel_0_GPIO_Port, RC_channel_0_Pin, value % 2);
+      HAL_GPIO_WritePin(RC_channel_1_GPIO_Port, RC_channel_1_Pin, (value >> 1) % 2);
+      HAL_GPIO_WritePin(RC_channel_2_GPIO_Port, RC_channel_2_Pin, (value >> 2) % 2);
+      HAL_GPIO_WritePin(RC_channel_3_GPIO_Port, RC_channel_3_Pin, (value >> 3) % 2);
+      HAL_GPIO_WritePin(RC_channel_4_GPIO_Port, RC_channel_4_Pin, (value >> 4) % 2);
+      HAL_GPIO_WritePin(RC_channel_5_GPIO_Port, RC_channel_5_Pin, (value >> 5) % 2);
+      HAL_GPIO_WritePin(RC_channel_6_GPIO_Port, RC_channel_6_Pin, (value >> 6) % 2);
+      HAL_GPIO_WritePin(RC_channel_7_GPIO_Port, RC_channel_7_Pin, (value >> 7) % 2);
+      rt_exit_critical();
 #ifdef DEBUG_PERIODIC_OUTPUT
-    rt_kprintf("%d ", value);
+      rt_kprintf("%d ", value);
 #endif
-    channel++;
-    if (channel >= 8)
-    {
-      channel = 0;
+      channel++;
+      if (channel >= 8)
+      {
+        channel = 0;
 #ifdef DEBUG_PERIODIC_OUTPUT
-      rt_kprintf("\n");
+        rt_kprintf("\n");
 #endif
-      rt_event_send(&control_event, rc_output_completed_event);
+        rt_event_send(&control_event, rc_output_completed_event);
+      }
     }
     rt_thread_mdelay(6);
   }
@@ -171,23 +173,24 @@ static void emergency_process(void *param)
   {
     if (rt_event_recv(&control_event,
                       emergency_trigger_event,
-                      RT_EVENT_FLAG_OR,
+                      (RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR),
                       RT_WAITING_FOREVER, &e) == RT_EOK)
     {
-      if (control_event.set & emergency_trigger_event)
-      {
-        rt_enter_critical();
-        HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, RESET);
-        HAL_GPIO_WritePin(Solenoid_valve_output_GPIO_Port,Solenoid_valve_output_Pin, RESET);
-        control_event.set &= ~emergency_trigger_event;
-        emergency_flag = 1;
-        rt_exit_critical();
+      rt_enter_critical();
+      HAL_GPIO_WritePin(Brake_GPIO_Port, Brake_Pin, RESET);
+      HAL_GPIO_WritePin(Solenoid_valve_output_GPIO_Port, Solenoid_valve_output_Pin, RESET);
+      emergency_flag = 1;
+      rt_exit_critical();
 #ifdef DEBUG_EMERGENCY
-        rt_kprintf("Trigger");
+      rt_kprintf("Trigger");
 #endif
-      }
     }
   }
+}
+
+void idle_hook(void)
+{
+  // rt_kprintf("idle!");
 }
 
 int main(void)
@@ -206,6 +209,8 @@ int main(void)
     rt_kprintf("init event failed. \n");
     return RT_ERROR;
   }
+
+  rt_thread_idle_sethook(idle_hook);
 
   /* Initialize Thread */
   /* Decode Thread */
@@ -277,8 +282,7 @@ void SystemClock_Config(void)
 
   /** Initializes the CPU, AHB and APB buses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -311,7 +315,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM1) {
+  if (htim->Instance == TIM1)
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -334,7 +339,7 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
