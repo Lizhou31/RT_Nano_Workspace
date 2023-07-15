@@ -50,7 +50,6 @@ void MX_IWDG_Init(void)
 
 }
 
-
 /* USER CODE BEGIN 1 */
 INIT_BOARD_EXPORT(MX_IWDG_Init);
 /* USER CODE END 1 */

@@ -57,6 +57,7 @@ uint8_t rising_count;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN EV */
@@ -170,7 +171,8 @@ void EXTI0_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI0_IRQn 0 */
   rt_interrupt_enter();
-  rt_event_send(&control_event, emergency_trigger_event);
+  HAL_TIM_Base_Start_IT(&htim7);
+  // rt_event_send(&control_event, emergency_trigger_event);
   /* USER CODE END EXTI0_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(Emergency_Falling_Pin);
   /* USER CODE BEGIN EXTI0_IRQn 1 */
@@ -205,6 +207,23 @@ void TIM1_UP_TIM10_IRQHandler(void)
   /* USER CODE BEGIN TIM1_UP_TIM10_IRQn 1 */
   rt_interrupt_leave();
   /* USER CODE END TIM1_UP_TIM10_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM7 global interrupt.
+  */
+void TIM7_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM7_IRQn 0 */
+  rt_interrupt_enter();
+  /* USER CODE END TIM7_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim7);
+  /* USER CODE BEGIN TIM7_IRQn 1 */
+  if (HAL_GPIO_ReadPin(Emergency_Falling_GPIO_Port, Emergency_Falling_Pin) == RESET)
+    rt_event_send(&control_event, emergency_trigger_event);
+  HAL_TIM_Base_Stop_IT(&htim7);
+  rt_interrupt_leave();
+  /* USER CODE END TIM7_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
