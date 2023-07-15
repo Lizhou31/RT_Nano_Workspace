@@ -53,7 +53,7 @@ extern UART_HandleTypeDef huart2;
 extern IWDG_HandleTypeDef hiwdg;
 SBUS_Handler sbushandler;
 uint8_t emergency_flag = 0;
-
+uint8_t throttle_flag = 0;
 struct rt_event control_event;
 /* USER CODE END PV */
 
@@ -100,6 +100,10 @@ static void rc_decode(void *param)
                       RT_WAITING_FOREVER, &e) == RT_EOK)
     {
       sbushandler.sbus_decode(&sbushandler);
+      if (sbushandler.rx_data.channel_decoded[1] > 129 || sbushandler.rx_data.channel_decoded[1] < 127)
+        throttle_flag = 1;
+      else
+        throttle_flag = 0;
     }
   }
 }
@@ -132,7 +136,7 @@ static void periodic_output(void *param)
       rt_enter_critical();
       if (4 == channel)
       {
-        HAL_GPIO_WritePin(Solenoid_valve_output_GPIO_Port, Solenoid_valve_output_Pin, !value);
+        HAL_GPIO_WritePin(Solenoid_valve_output_GPIO_Port, Solenoid_valve_output_Pin, (!value) && throttle_flag);
       }
       HAL_GPIO_WritePin(RC_channel_8_GPIO_Port, RC_channel_8_Pin, channel % 2);
       HAL_GPIO_WritePin(RC_channel_9_GPIO_Port, RC_channel_9_Pin, (channel >> 1) % 2);
