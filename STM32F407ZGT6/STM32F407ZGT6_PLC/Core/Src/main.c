@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "iwdg.h"
 #include "rtc.h"
 #include "usart.h"
 #include "gpio.h"
@@ -49,6 +50,7 @@
 
 /* USER CODE BEGIN PV */
 extern UART_HandleTypeDef huart2;
+extern IWDG_HandleTypeDef hiwdg;
 SBUS_Handler sbushandler;
 uint8_t emergency_flag = 0;
 
@@ -190,7 +192,7 @@ static void emergency_process(void *param)
 
 void idle_hook(void)
 {
-  // rt_kprintf("idle!");
+  HAL_IWDG_Refresh(&hiwdg);
 }
 
 int main(void)
@@ -267,8 +269,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
