@@ -76,6 +76,9 @@ Core/Src/system_stm32f4xx.c \
 ../../modules/rtthread-nano/rt-thread/components/finsh/cmd.c \
 ../../modules/rtthread-nano/rt-thread/compoenets/finsh/msh.c \
 ../../modules/rtthread-nano/rt-thread/components/finsh/shell.c \
+Lib/pthreads/pthread_mutex.c \
+Lib/Unity/src/unity.c \
+Lib/test/src/test_pthread_mutex.c \
 bsp/Src/board.c \
 bsp/Src/ringbuffer.c \
 Core/Src/gpio.c \
@@ -142,14 +145,19 @@ C_INCLUDES =  \
 -IDrivers/CMSIS/Device/ST/STM32F4xx/Include \
 -IDrivers/CMSIS/Include \
 -I../../modules/rtthread-nano/rt-thread/include \
+-I../../modules/rtthread-nano/rt-thread/include/libc \
 -I../../modules/rtthread-nano/rt-thread/components/finsh \
+-ILib/pthreads/ \
+-ILib/Unity/src \
+-ILib/test/inc \
 -Ibsp/Inc
+
 
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -Wa,-mimplicit-it=thumb
 
-CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -DUNITY_INCLUDE_CONFIG_H
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
