@@ -13,6 +13,7 @@
 
 #include "unity.h"
 #include "main.h"
+#include "pthread.h"
 
 int mutex_test(void);
 
