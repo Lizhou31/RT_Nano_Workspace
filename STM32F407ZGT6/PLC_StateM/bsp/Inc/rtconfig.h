@@ -34,7 +34,8 @@
 // <h>Debug Configuration
 // <c1>enable kernel debug configuration
 //  <i>Default: enable kernel debug configuration
-// #define RT_DEBUG
+#define RT_DEBUG
+// #define RT_DEBUG_IPC 1
 // </c>
 // <o>enable components initialization debug configuration<0-1>
 //  <i>Default: 0

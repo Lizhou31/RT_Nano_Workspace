@@ -19,21 +19,24 @@ const pthread_mutexattr_t pthread_default_mutexattr = PTHREAD_PROCESS_PRIVATE;
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 {
     rt_err_t result;
-    char name[RT_NAME_MAX];
+    char mutex_name[RT_NAME_MAX];
     static rt_uint16_t pthread_mutex_number = 0;
 
+    /* check pointer not null */
     if (!mutex)
         return EINVAL;
 
-    /* build mutex name */
-    rt_snprintf(name, sizeof(name), "pmtx%02d", pthread_mutex_number++);
+    /* parameter check */
     if (attr == RT_NULL)
         mutex->attr = pthread_default_mutexattr;
     else
         mutex->attr = *attr;
 
+    /* build mutex name */
+    rt_snprintf(mutex_name, sizeof(mutex_name), "pmtx%02d", pthread_mutex_number++);
+
     /* init mutex lock */
-    result = rt_mutex_init(&(mutex->lock), name, RT_IPC_FLAG_PRIO);
+    result = rt_mutex_init(&(mutex->lock), mutex_name, RT_IPC_FLAG_PRIO);
     if (result != RT_EOK)
         return EINVAL;
 

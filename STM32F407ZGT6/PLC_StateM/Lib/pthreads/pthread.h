@@ -14,6 +14,8 @@
 
 #include <rtthread.h>
 #include "libc_errno.h"
+#include "sys/types.h"
+#include "sys/time.h"
 
 #define PTHREAD_COND_INITIALIZER \
     {                            \
@@ -53,15 +55,50 @@ struct pthread_mutex
 };
 typedef struct pthread_mutex pthread_mutex_t;
 
+struct pthread_cond
+{
+    pthread_condattr_t attr;
+    struct rt_semaphore sem;
+};
+typedef struct pthread_cond pthread_cond_t;
+
 /* pthread mutex interface */
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
 int pthread_mutex_destroy(pthread_mutex_t *mutex);
 int pthread_mutex_lock(pthread_mutex_t *mutex);
 int pthread_mutex_unlock(pthread_mutex_t *mutex);
-// trylock
-// getprioceiling
-// setprioceiling
+int pthread_mutex_trylock(pthread_mutex_t *mutex);
+int pthread_mutex_getprioceiling(const pthread_mutex_t *mutex, int *prioceiling);
+int pthread_mutex_setprioceiling(pthread_mutex_t *mutex, int prioceiling, int *old_ceiling);
 
-// pthread_mutexattr
+int pthread_mutexattr_init(pthread_mutexattr_t *attr);
+int pthread_mutexattr_destroy(pthread_mutexattr_t *attr);
+int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type);
+int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type);
+int pthread_mutexattr_setpshared(pthread_mutexattr_t *attr, int pshared);
+int pthread_mutexattr_getpshared(pthread_mutexattr_t *attr, int *pshared);
+int pthread_mutexattr_getprioceiling(const pthread_mutexattr_t *attr, int *prioceiling);
+int pthread_mutexattr_setprioceiling(const pthread_mutexattr_t *attr, int prioceiling);
+int pthread_mutexattr_getprotocol(const pthread_mutexattr_t *attr, int *protocol);
+int pthread_mutexattr_setprotocol(const pthread_mutexattr_t *attr, int protocol);
 
+/* pthread condition interface */
+int pthread_condattr_destroy(pthread_condattr_t *attr);
+int pthread_condattr_init(pthread_condattr_t *attr);
+
+/* ADVANCED REALTIME feature in IEEE Std 1003.1, 2004 Edition */
+int pthread_condattr_getclock(const pthread_condattr_t *attr,
+                              clockid_t *clock_id);
+int pthread_condattr_setclock(pthread_condattr_t *attr,
+                              clockid_t clock_id);
+
+int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr);
+int pthread_cond_destroy(pthread_cond_t *cond);
+int pthread_cond_broadcast(pthread_cond_t *cond);
+int pthread_cond_signal(pthread_cond_t *cond);
+
+int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
+int pthread_cond_timedwait(pthread_cond_t *cond,
+                           pthread_mutex_t *mutex,
+                           const struct timespec *abstime);
 #endif /* _PTHREAD_H_ */
