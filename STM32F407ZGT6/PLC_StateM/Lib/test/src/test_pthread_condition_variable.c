@@ -30,6 +30,9 @@ void test_pthread_cond_init_and_destroy(void)
 }
 
 /* test pthread cond broadcast */
+/* The pthread_cond_broadcast() function shall unblock
+ * all threads currently blocked on the specified condition variable cond. 
+ */
 static pthread_mutex_t p_mutex;
 static pthread_cond_t p_cond;
 static int task_report[4] = {0};
@@ -93,8 +96,51 @@ void test_ptherad_cond_broadcast(void)
 }
 
 /* test pthread cond signal */
+/* The pthread_cond_signal() function shall 
+ * unblock at least one of the threads that are blocked 
+ * on the specified condition variable cond (if any threads are blocked on cond).
+*/
+/* test pthread cond wait */
+static void test_pthread_cond_signal_thread(void *param)
+{
+    pthread_mutex_lock(&p_mutex);
+    if (task_report[0] == 0)
+    {
+        pthread_cond_wait(&p_cond, &p_mutex);
+    }
+    task_report[1] = 1;
+    pthread_mutex_unlock(&p_mutex);
+}
 void test_pthread_cond_signal(void)
 {
+    int result = 0;
+    result = pthread_mutex_init(&p_mutex, RT_NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, result, "pthread mutex initialized failed.");
+    result = pthread_cond_init(&p_cond, RT_NULL);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, result, "pthread cond initialized failed.");
+
+    for (int i = 0; i < 4; i++)
+    {
+        task_report[i] = 0;
+    }
+
+    rt_thread_t cond_test_thread = rt_thread_create("task wait",
+                                                    test_pthread_cond_signal_thread,
+                                                    RT_NULL, 512U, 15, 10);
+    rt_thread_startup(cond_test_thread);
+
+    rt_thread_mdelay(10);
+    result = pthread_mutex_lock(&p_mutex);
+    task_report[0] = 1;
+
+    pthread_mutex_unlock(&p_mutex);
+    pthread_cond_signal(&p_cond);
+
+    rt_thread_mdelay(10);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, task_report[1], "cond signal error.");
+
+    pthread_mutex_destroy(&p_mutex);
+    pthread_cond_destroy(&p_cond);
 }
 
 /* test pthread cond wait */
@@ -155,6 +201,7 @@ int unity_pthread_cond_test(void)
 #endif
     RUN_TEST(test_pthread_cond_init_and_destroy);
     RUN_TEST(test_ptherad_cond_broadcast);
+    RUN_TEST(test_pthread_cond_signal);
     RUN_TEST(test_pthread_cond_wait);
 #ifndef UNITT_TEST_ALL
     UNITY_END();

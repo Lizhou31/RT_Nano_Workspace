@@ -13,6 +13,7 @@
 #define _PTHREAD_H_
 
 #include <rtthread.h>
+#include "rthw.h"
 #include "libc_errno.h"
 #include "sys/types.h"
 #include "sys/time.h"

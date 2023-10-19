@@ -100,12 +100,39 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
 
 int pthread_cond_signal(pthread_cond_t *cond)
 {
-    return 0;
+    rt_base_t temp;
+    rt_err_t result;
+
+    if (cond == RT_NULL)
+        return EINVAL;
+    if (cond->attr == -1)
+        pthread_cond_init(cond, RT_NULL);
+
+    /* disable interrupt */
+    temp = rt_hw_interrupt_disable();
+    if (rt_list_isempty(&cond->sem.parent.suspend_thread))
+    {
+        /* enable interrupt */
+        rt_hw_interrupt_enable(temp);
+        return 0;
+    }
+    else
+    {
+        /* enable interrupt */
+        rt_hw_interrupt_enable(temp);
+        result = rt_sem_release(&(cond->sem));
+        if (result == RT_EOK)
+        {
+            return 0;
+        }
+
+        return 0;
+    }
 }
 
 rt_err_t _pthread_cond_timedwait(pthread_cond_t *cond,
-                                pthread_mutex_t *mutex,
-                                rt_int32_t timeout)
+                                 pthread_mutex_t *mutex,
+                                 rt_int32_t timeout)
 {
     rt_err_t result = RT_EOK;
     rt_sem_t sem;
