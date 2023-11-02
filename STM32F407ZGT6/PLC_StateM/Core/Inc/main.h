@@ -62,7 +62,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 // #define MUTEX_UNITTEST
 // #define CONDITION_VARIABLE_UNITTEST
-#define UNITT_TEST_ALL
+#define UNIT_TEST_ALL
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

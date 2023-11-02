@@ -1,6 +1,6 @@
 /**
  * @file test_pthread_mutex.c
- * @author Lizhou (you@domain.com)
+ * @author Lizhou
  * @brief 
  * @version 0.1
  * @date 2023-10-16
@@ -67,16 +67,16 @@ void test_mutex_work(void)
 int unity_pthread_mutex_test(void)
 {
     rt_kprintf("\nPthread Mutex Unit Test\n\n");
-#ifndef UNITT_TEST_ALL
+#ifndef UNIT_TEST_ALL
     UNITY_BEGIN();
 #endif
     RUN_TEST(test_pthread_mutex_init_and_destroy);
     RUN_TEST(test_mutex_work);
-#ifndef UNITT_TEST_ALL
+#ifndef UNIT_TEST_ALL
     UNITY_END();
 #endif
 }
-#ifndef UNITT_TEST_ALL
+#ifndef UNIT_TEST_ALL
 #ifdef MUTEX_UNITTEST
 MSH_CMD_EXPORT(unity_pthread_mutex_test, pthread mutex unit test);
 #endif

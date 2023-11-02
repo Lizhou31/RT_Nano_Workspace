@@ -78,10 +78,12 @@ Core/Src/system_stm32f4xx.c \
 ../../modules/rtthread-nano/rt-thread/components/finsh/shell.c \
 Lib/pthreads/pthread_mutex.c \
 Lib/pthreads/pthread_cond.c \
+Lib/pthreads/pthread_rwlock.c \
 Lib/Unity/src/unity.c \
 Lib/test/src/base_test.c \
 Lib/test/src/test_pthread_mutex.c \
 Lib/test/src/test_pthread_condition_variable.c \
+Lib/test/src/test_pthread_rwlock.c \
 bsp/Src/board.c \
 bsp/Src/ringbuffer.c \
 Core/Src/gpio.c \

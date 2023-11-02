@@ -196,19 +196,19 @@ void test_pthread_cond_timewait(void)
 int unity_pthread_cond_test(void)
 {
     rt_kprintf("\nPthread Condition Variable Unit Test\n\n");
-#ifndef UNITT_TEST_ALL
+#ifndef UNIT_TEST_ALL
     UNITY_BEGIN();
 #endif
     RUN_TEST(test_pthread_cond_init_and_destroy);
     RUN_TEST(test_ptherad_cond_broadcast);
     RUN_TEST(test_pthread_cond_signal);
     RUN_TEST(test_pthread_cond_wait);
-#ifndef UNITT_TEST_ALL
+#ifndef UNIT_TEST_ALL
     UNITY_END();
 #endif
 }
 
-#ifndef UNITT_TEST_ALL
+#ifndef UNIT_TEST_ALL
 #ifdef CONDITION_VARIABLE_UNITTEST
 MSH_CMD_EXPORT(unity_pthread_cond_test, pthread condition variable unit test);
 #endif

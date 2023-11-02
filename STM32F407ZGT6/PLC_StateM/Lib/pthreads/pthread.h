@@ -63,6 +63,20 @@ struct pthread_cond
 };
 typedef struct pthread_cond pthread_cond_t;
 
+struct pthread_rwlock
+{
+    pthread_rwlockattr_t attr;
+
+    pthread_mutex_t rw_mutex;      /* basic lock on this struct */
+    pthread_cond_t rw_condreaders; /* for reader threads waiting */
+    pthread_cond_t rw_condwriters; /* for writer threads waiting */
+
+    int rw_nwaitreaders; /* the number of reader threads waiting */
+    int rw_nwaitwriters; /* the number of writer threads waiting */
+    int rw_refcount;     /* 0: unlocked, -1: locked by writer, > 0 locked by n readers */
+};
+typedef struct pthread_rwlock pthread_rwlock_t;
+
 /* pthread mutex interface */
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
 int pthread_mutex_destroy(pthread_mutex_t *mutex);
@@ -102,4 +116,24 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 int pthread_cond_timedwait(pthread_cond_t *cond,
                            pthread_mutex_t *mutex,
                            const struct timespec *abstime);
+
+/* pthread rwlock interface */
+int pthread_rwlockattr_init(pthread_rwlockattr_t *attr);
+int pthread_rwlockattr_destroy(pthread_rwlockattr_t *attr);
+int pthread_rwlockattr_getpshared(const pthread_rwlockattr_t *attr, int *pshared);
+int pthread_rwlockattr_setpshared(pthread_rwlockattr_t *attr, int pshared);
+
+int pthread_rwlock_init(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr);
+int pthread_rwlock_destroy(pthread_rwlock_t *rwlock);
+
+int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock);
+int pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock);
+
+int pthread_rwlock_timedrdlock(pthread_rwlock_t *rwlock, const struct timespec *abstime);
+int pthread_rwlock_timedwrlock(pthread_rwlock_t *rwlock, const struct timespec *abstime);
+
+int pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
+
+int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock);
+int pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock);
 #endif /* _PTHREAD_H_ */

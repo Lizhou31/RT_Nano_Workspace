@@ -19,7 +19,7 @@ void test_unity(void)
     TEST_ASSERT_MESSAGE(1, "unity doesn't work :(");
 }
 
-#ifdef UNITT_TEST_ALL
+#ifdef UNIT_TEST_ALL
 void unit_test_all(void)
 {
     UNITY_BEGIN();
@@ -27,6 +27,7 @@ void unit_test_all(void)
     RUN_TEST(test_unity);
     unity_pthread_mutex_test();
     unity_pthread_cond_test();
+    unity_pthread_rwlock_test();
     UNITY_END();
 }
 MSH_CMD_EXPORT(unit_test_all, unit test all);

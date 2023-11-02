@@ -17,8 +17,9 @@
 
 void test_unity(void);
 
-#ifdef UNITT_TEST_ALL
+#ifdef UNIT_TEST_ALL
 int unity_pthread_mutex_test(void);
 int unity_pthread_cond_test(void);
+int unity_pthread_rwlock_test(void);
 #endif
 #endif /* __TEST_PTHREAD_MUTEX_H_ */
