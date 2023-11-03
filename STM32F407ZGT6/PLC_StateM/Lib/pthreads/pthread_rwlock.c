@@ -143,12 +143,73 @@ int pthread_rwlock_timedwrlock(pthread_rwlock_t *rwlock, const struct timespec *
 
 int pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
 {
-    return 0;
+    int result;
+
+    if (!rwlock)
+    {
+        return EINVAL;
+    }
+    if (rwlock->attr == -1)
+    {
+        pthread_rwlock_init(rwlock, RT_NULL);
+    }
+
+    if ((result = pthread_mutex_lock(&rwlock->rw_mutex)) != 0)
+    {
+        return result;
+    }
+
+    if (rwlock->rw_refcount > 0)
+        rwlock->rw_refcount--; /* releasing a reader */
+    else if (rwlock->rw_refcount == -1)
+        rwlock->rw_refcount = 0; /* releasing a writer */
+
+    /* give preference to waiting writers over wating readers */
+    if (rwlock->rw_nwaitwriters > 0)
+    {
+        if (rwlock->rw_refcount == 0)
+            result = pthread_cond_signal(&rwlock->rw_condwriters);
+    }
+    else if (rwlock->rw_nwaitreaders > 0)
+    {
+        result = pthread_cond_broadcast(&rwlock->rw_condreaders);
+    }
+
+    pthread_mutex_unlock(&(rwlock->rw_mutex));
+
+    return result;
 }
 
 int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
 {
-    return 0;
+    int result;
+
+    if (!rwlock)
+        return EINVAL;
+    if (rwlock->attr == -1)
+        pthread_rwlock_init(rwlock, NULL);
+
+    if ((result = pthread_mutex_lock(&rwlock->rw_mutex)) != 0)
+        return result;
+
+    while (rwlock->rw_refcount != 0)
+    {
+        rwlock->rw_nwaitwriters++;
+        /* rw_mutex will be released when waiting for rw_condwriters */
+        result = pthread_cond_wait(&rwlock->rw_condwriters, &rwlock->rw_mutex);
+        /* rw_mutex should have been taken again when returned from waiting */
+        rwlock->rw_nwaitwriters--;
+
+        if (result != 0)
+            break;
+    }
+
+    if (result == 0)
+        rwlock->rw_refcount = -1;
+
+    pthread_mutex_unlock(&rwlock->rw_mutex);
+
+    return (result);
 }
 
 int pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock)
