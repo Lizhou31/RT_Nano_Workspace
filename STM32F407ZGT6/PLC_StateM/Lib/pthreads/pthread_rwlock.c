@@ -1,12 +1,12 @@
 /**
  * @file pthread_rwlock.c
  * @author Lizhou
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-10-30
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include "pthread.h"
 
@@ -93,6 +93,15 @@ int pthread_rwlock_destroy(pthread_rwlock_t *rwlock)
     return result;
 }
 
+/**
+ * @brief aquire a read/write lock for reading
+ *
+ * @details acquires a read lock on lock provided that lock is not presently held for writing and no writer threads are presently blocked on the lock.
+ *          If the read lock cannot be immediately acquired, the calling thread blocks until it can acquire the lock.
+ *
+ * @param[in] rwlock Pthread read/write lock structure
+ * @return int
+ */
 int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock)
 {
     int result;
@@ -126,11 +135,48 @@ int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock)
     return result;
 }
 
+/**
+ * @brief aquire a read/write lock for reading
+ *
+ * @details performs the same action as pthread_rwlock_rdlock(),
+ *          but does not block if the lock cannot be immediately obtained
+ *          (i.e., the lock is held for writing or there are writers waiting).
+ *
+ * @param[in] rwlock Pthread read/write lock structure
+ * @return int
+ */
 int pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock)
 {
-    return 0;
+    int result;
+
+    if (!rwlock)
+        return EINVAL;
+    if (rwlock->attr == -1)
+        pthread_rwlock_init(rwlock, NULL);
+
+    if ((result = pthread_mutex_lock(&rwlock->rw_mutex)) != 0)
+        return (result);
+
+    if (rwlock->rw_refcount < 0 || rwlock->rw_nwaitwriters > 0)
+        result = EBUSY; /* held by a writer or waiting writers */
+    else
+        rwlock->rw_refcount++; /* increment count of reader locks */
+
+    pthread_mutex_unlock(&rwlock->rw_mutex);
+
+    return (result);
 }
 
+/**
+ * @brief aquire a read/write lock for reading
+ *
+ * @details performs the same action,
+ *          but will not wait beyond abstime to obtain the lock before returning.
+ *
+ * @param[in] rwlock Pthread read/write lock structure
+ * @param[in] abstime
+ * @return int
+ */
 int pthread_rwlock_timedrdlock(pthread_rwlock_t *rwlock, const struct timespec *abstime)
 {
     return 0;

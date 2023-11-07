@@ -178,7 +178,6 @@ void test_pthread_cond_wait(void)
     result = pthread_mutex_lock(&p_mutex);
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, result, "mutex lock failed.");
 
-    task_report[0] = 1;
     pthread_mutex_unlock(&p_mutex);
 
     pthread_cond_broadcast(&p_cond);

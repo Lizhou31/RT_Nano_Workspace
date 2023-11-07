@@ -1,12 +1,12 @@
 /**
  * @file test_pthread_rwlock.c
  * @author Lizhou
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-11-01
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 
 #include "unit_test.h"
@@ -32,17 +32,18 @@ void test_pthread_rwlock_init_and_destroy(void)
     TEST_ASSERT_EQUAL_INT_MESSAGE(-1, p_rwlock.rw_condwriters.attr, "check condwiters attr error");
 }
 
-/* test pthread rwlock rdlock*/
 static pthread_rwlock_t p_rwlock;
-static uint8_t blocking = 0;
+static uint8_t blocking_r = 0, blocking_w = 0;
 static uint8_t result[2] = {0};
+
+/* test pthread rwlock rdlock/wrlock */
 static void test_pthread_rwlock_rdlock_thread(void *param)
 {
     uint8_t *index = (uint8_t *)param;
     pthread_rwlock_rdlock(&p_rwlock);
     result[*index] = *index;
     pthread_rwlock_unlock(&p_rwlock);
-    blocking = 1;
+    blocking_r = 1;
 }
 static void test_pthread_rwlock_wrlock_thread(void *param)
 {
@@ -51,11 +52,16 @@ static void test_pthread_rwlock_wrlock_thread(void *param)
     *index = 0;
     *(index + 1) = 1;
     pthread_rwlock_unlock(&p_rwlock);
+    blocking_w = 1;
 }
 
 void test_pthread_rwlock_rdlock(void)
 {
     pthread_rwlock_init(&p_rwlock, RT_NULL);
+    blocking_r = 0;
+    blocking_w = 0;
+    result[0] = 0;
+    result[1] = 0;
 
     pthread_rwlock_wrlock(&p_rwlock);
 
@@ -67,8 +73,8 @@ void test_pthread_rwlock_rdlock(void)
                                                  test_pthread_rwlock_rdlock_thread,
                                                  &(read_memory[1]), 512U, 15, 10);
     rt_thread_t write_thread = rt_thread_create("write_thread",
-                                               test_pthread_rwlock_wrlock_thread,
-                                               read_memory, 512U, 15, 10);
+                                                test_pthread_rwlock_wrlock_thread,
+                                                read_memory, 512U, 15, 10);
 
     rt_thread_startup(read_thread_A);
     rt_thread_startup(read_thread_B);
@@ -77,7 +83,7 @@ void test_pthread_rwlock_rdlock(void)
     rt_thread_mdelay(100);
 
     /* test read lock blocking */
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, blocking, "read lock is not blocking.");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, blocking_r, "read lock is not blocking.");
 
     pthread_rwlock_unlock(&p_rwlock);
 
@@ -88,14 +94,118 @@ void test_pthread_rwlock_rdlock(void)
     pthread_rwlock_destroy(&p_rwlock);
 }
 
+void test_pthread_rwlock_wrlock(void)
+{
+    pthread_rwlock_init(&p_rwlock, RT_NULL);
+    blocking_r = 0;
+    blocking_w = 0;
+    result[0] = 0;
+    result[1] = 0;
+
+    pthread_rwlock_rdlock(&p_rwlock);
+
+    uint8_t write_memory[4] = {0};
+    rt_thread_t write_thread_A = rt_thread_create("write_threadA",
+                                                  test_pthread_rwlock_wrlock_thread,
+                                                  write_memory, 512U, 15, 10);
+    rt_thread_t write_thread_B = rt_thread_create("write_threadB",
+                                                  test_pthread_rwlock_wrlock_thread,
+                                                  &(write_memory[2]), 512U, 15, 10);
+    rt_thread_startup(write_thread_A);
+    rt_thread_startup(write_thread_B);
+
+    rt_thread_mdelay(100);
+
+    /* test read lock blocking */
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, blocking_w, "write lock is not blocking.");
+
+    pthread_rwlock_unlock(&p_rwlock);
+
+    rt_thread_mdelay(100);
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, write_memory[0], "write thread A first element failed.");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, write_memory[1], "write thread A second element failed.");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, write_memory[2], "write thread B first element failed.");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, write_memory[3], "write thread B second element failed.");
+
+    pthread_rwlock_destroy(&p_rwlock);
+}
+
+static void test_pthread_rwlock_tryrdlock_thread(void *param)
+{
+    uint8_t *index = (uint8_t *)param;
+    if (EBUSY == pthread_rwlock_tryrdlock(&p_rwlock))
+    {
+        blocking_r = 1;
+    }
+    else
+    {
+        result[*index] = *index;
+        pthread_rwlock_unlock(&p_rwlock);
+    }
+}
+static void test_pthread_rwlock_trywrlock_thread(void *param)
+{
+    uint8_t *index = (uint8_t *)param;
+    pthread_rwlock_trywrlock(&p_rwlock);
+    *index = 0;
+    *(index + 1) = 1;
+    pthread_rwlock_unlock(&p_rwlock);
+    blocking_w = 1;
+}
+void test_pthread_rwlock_tryrdlock(void)
+{
+    pthread_rwlock_init(&p_rwlock, RT_NULL);
+    blocking_r = 0;
+    blocking_w = 0;
+    result[0] = 0;
+    result[1] = 0;
+
+    pthread_rwlock_wrlock(&p_rwlock);
+
+    uint8_t read_memory[2] = {0};
+    rt_thread_t read_thread_A = rt_thread_create("read_threadA",
+                                                 test_pthread_rwlock_tryrdlock_thread,
+                                                 &(read_memory[0]), 512U, 15, 10);
+    rt_thread_t read_thread_B = rt_thread_create("read_threadB",
+                                                 test_pthread_rwlock_tryrdlock_thread,
+                                                 &(read_memory[1]), 512U, 15, 10);
+
+    rt_thread_startup(read_thread_A);
+    rt_thread_startup(read_thread_B);
+
+    /* test read lock nonblocking */
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, blocking_r, "read lock not return EBUSY.");
+
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, result[0], "read thread A first failed.");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, result[1], "read thread B first failed.");
+
+    read_memory[1] = 1;
+    pthread_rwlock_unlock(&p_rwlock);
+    read_thread_B = rt_thread_create("read_threadB",
+                                     test_pthread_rwlock_tryrdlock_thread,
+                                     &(read_memory[1]), 512U, 15, 10);
+
+    rt_thread_startup(read_thread_B);
+
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, result[1], "read thread B second failed.");
+
+    pthread_rwlock_destroy(&p_rwlock);
+}
+
+void test_pthread_rwlock_trywrlock(void)
+{
+}
+
 int unity_pthread_rwlock_test(void)
 {
-    rt_kprintf("\nPthread Rwlock Unit Test\n\n");
+    rt_kprintf("\nPthread RWlock Unit Test\n\n");
 #ifndef UNIT_TEST_ALL
     UNITY_BEGIN();
 #endif
     RUN_TEST(test_pthread_rwlock_init_and_destroy);
     RUN_TEST(test_pthread_rwlock_rdlock);
+    RUN_TEST(test_pthread_rwlock_wrlock);
+    RUN_TEST(test_pthread_rwlock_tryrdlock);
 #ifndef UNIT_TEST_ALL
     UNITY_END();
 #endif
