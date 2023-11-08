@@ -34,7 +34,7 @@ void test_pthread_rwlock_init_and_destroy(void)
 
 static pthread_rwlock_t p_rwlock;
 static uint8_t blocking_r = 0, blocking_w = 0;
-static uint8_t result[2] = {0};
+static int result[2] = {0};
 
 /* test pthread rwlock rdlock/wrlock */
 static void test_pthread_rwlock_rdlock_thread(void *param)
@@ -88,8 +88,8 @@ void test_pthread_rwlock_rdlock(void)
     pthread_rwlock_unlock(&p_rwlock);
 
     rt_thread_mdelay(100);
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, result[0], "read thread A failed.");
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, result[1], "read thread B failed.");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, result[0], "read thread A failed.");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, result[1], "read thread B failed.");
 
     pthread_rwlock_destroy(&p_rwlock);
 }
@@ -122,27 +122,56 @@ void test_pthread_rwlock_wrlock(void)
     pthread_rwlock_unlock(&p_rwlock);
 
     rt_thread_mdelay(100);
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, write_memory[0], "write thread A first element failed.");
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, write_memory[1], "write thread A second element failed.");
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, write_memory[2], "write thread B first element failed.");
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, write_memory[3], "write thread B second element failed.");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, write_memory[0], "write thread A first element failed.");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, write_memory[1], "write thread A second element failed.");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, write_memory[2], "write thread B first element failed.");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, write_memory[3], "write thread B second element failed.");
 
     pthread_rwlock_destroy(&p_rwlock);
 }
 
 static void test_pthread_rwlock_tryrdlock_thread(void *param)
 {
-    uint8_t *index = (uint8_t *)param;
-    if (EBUSY == pthread_rwlock_tryrdlock(&p_rwlock))
-    {
-        blocking_r = 1;
-    }
+    int *test = (int *)param;
+
+    int ret = pthread_rwlock_tryrdlock(&p_rwlock);
+    if( EBUSY == ret)
+        result[0] = ret;
     else
-    {
-        result[*index] = *index;
-        pthread_rwlock_unlock(&p_rwlock);
-    }
+        result[0] = *test;
+    pthread_rwlock_unlock(&p_rwlock);
 }
+void test_pthread_rwlock_tryrdlock(void)
+{
+    pthread_rwlock_init(&p_rwlock, RT_NULL);
+    result[0] = 0;
+
+    pthread_rwlock_wrlock(&p_rwlock);
+
+    int read_memory = 0;
+    rt_thread_t read_thread_A = rt_thread_create("read_threadA",
+                                                 test_pthread_rwlock_tryrdlock_thread,
+                                                 &read_memory, 512U, 15, 10);
+
+    rt_thread_startup(read_thread_A);
+
+    /* test read lock return EBUSY */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(EBUSY, result[0], "read lock not return EBUSY.");
+
+
+    read_memory = 1;
+    pthread_rwlock_unlock(&p_rwlock);
+    rt_thread_t read_thread_B = rt_thread_create("read_threadB",
+                                                 test_pthread_rwlock_tryrdlock_thread,
+                                                 &read_memory, 512U, 15, 10);
+
+    rt_thread_startup(read_thread_B);
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, result[0], "read thread B second failed.");
+
+    pthread_rwlock_destroy(&p_rwlock);
+}
+
 static void test_pthread_rwlock_trywrlock_thread(void *param)
 {
     uint8_t *index = (uint8_t *)param;
@@ -152,46 +181,6 @@ static void test_pthread_rwlock_trywrlock_thread(void *param)
     pthread_rwlock_unlock(&p_rwlock);
     blocking_w = 1;
 }
-void test_pthread_rwlock_tryrdlock(void)
-{
-    pthread_rwlock_init(&p_rwlock, RT_NULL);
-    blocking_r = 0;
-    blocking_w = 0;
-    result[0] = 0;
-    result[1] = 0;
-
-    pthread_rwlock_wrlock(&p_rwlock);
-
-    uint8_t read_memory[2] = {0};
-    rt_thread_t read_thread_A = rt_thread_create("read_threadA",
-                                                 test_pthread_rwlock_tryrdlock_thread,
-                                                 &(read_memory[0]), 512U, 15, 10);
-    rt_thread_t read_thread_B = rt_thread_create("read_threadB",
-                                                 test_pthread_rwlock_tryrdlock_thread,
-                                                 &(read_memory[1]), 512U, 15, 10);
-
-    rt_thread_startup(read_thread_A);
-    rt_thread_startup(read_thread_B);
-
-    /* test read lock nonblocking */
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, blocking_r, "read lock not return EBUSY.");
-
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, result[0], "read thread A first failed.");
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, result[1], "read thread B first failed.");
-
-    read_memory[1] = 1;
-    pthread_rwlock_unlock(&p_rwlock);
-    read_thread_B = rt_thread_create("read_threadB",
-                                     test_pthread_rwlock_tryrdlock_thread,
-                                     &(read_memory[1]), 512U, 15, 10);
-
-    rt_thread_startup(read_thread_B);
-
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, result[1], "read thread B second failed.");
-
-    pthread_rwlock_destroy(&p_rwlock);
-}
-
 void test_pthread_rwlock_trywrlock(void)
 {
 }
