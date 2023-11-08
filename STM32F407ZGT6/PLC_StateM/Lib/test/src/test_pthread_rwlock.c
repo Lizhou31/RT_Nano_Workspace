@@ -135,8 +135,11 @@ static void test_pthread_rwlock_tryrdlock_thread(void *param)
     int *test = (int *)param;
 
     int ret = pthread_rwlock_tryrdlock(&p_rwlock);
-    if( EBUSY == ret)
+    if (EBUSY == ret)
+    {
         result[0] = ret;
+        return;
+    }
     else
         result[0] = *test;
     pthread_rwlock_unlock(&p_rwlock);
@@ -158,7 +161,6 @@ void test_pthread_rwlock_tryrdlock(void)
     /* test read lock return EBUSY */
     TEST_ASSERT_EQUAL_INT_MESSAGE(EBUSY, result[0], "read lock not return EBUSY.");
 
-
     read_memory = 1;
     pthread_rwlock_unlock(&p_rwlock);
     rt_thread_t read_thread_B = rt_thread_create("read_threadB",
@@ -174,15 +176,48 @@ void test_pthread_rwlock_tryrdlock(void)
 
 static void test_pthread_rwlock_trywrlock_thread(void *param)
 {
-    uint8_t *index = (uint8_t *)param;
-    pthread_rwlock_trywrlock(&p_rwlock);
-    *index = 0;
-    *(index + 1) = 1;
+    uint8_t *test = (uint8_t *)param;
+    int ret = pthread_rwlock_trywrlock(&p_rwlock);
+    if (0 != ret)
+    {
+        result[0] = ret;
+        return;
+    }
+    else if (0 == ret)
+    {
+        result[0] = *test;
+    }
     pthread_rwlock_unlock(&p_rwlock);
-    blocking_w = 1;
 }
 void test_pthread_rwlock_trywrlock(void)
 {
+    pthread_rwlock_init(&p_rwlock, RT_NULL);
+    result[0] = 0;
+
+    pthread_rwlock_wrlock(&p_rwlock);
+
+    int write_memory = 0;
+    rt_thread_t write_thread_A = rt_thread_create("write_threadA",
+                                                  test_pthread_rwlock_trywrlock_thread,
+                                                  &write_memory, 512U, 15, 10);
+
+    rt_thread_startup(write_thread_A);
+
+    /* test write lock return EBUSY */
+    TEST_ASSERT_EQUAL_INT_MESSAGE(EBUSY, result[0], "read lock not return EBUSY.");
+
+    write_memory = 1;
+    pthread_rwlock_unlock(&p_rwlock);
+
+    rt_thread_t write_thread_B = rt_thread_create("write_threadB",
+                                                 test_pthread_rwlock_trywrlock_thread,
+                                                 &write_memory, 512U, 15, 10);
+
+    rt_thread_startup(write_thread_B);
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, result[0], "write thread B second failed.");
+
+    pthread_rwlock_destroy(&p_rwlock); 
 }
 
 int unity_pthread_rwlock_test(void)
@@ -195,6 +230,7 @@ int unity_pthread_rwlock_test(void)
     RUN_TEST(test_pthread_rwlock_rdlock);
     RUN_TEST(test_pthread_rwlock_wrlock);
     RUN_TEST(test_pthread_rwlock_tryrdlock);
+    RUN_TEST(test_pthread_rwlock_trywrlock);
 #ifndef UNIT_TEST_ALL
     UNITY_END();
 #endif

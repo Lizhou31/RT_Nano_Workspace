@@ -260,5 +260,23 @@ int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
 
 int pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock)
 {
-    return 0;
+    int result;
+
+    if (!rwlock)
+        return EINVAL;
+
+    if (rwlock->attr == -1)
+        pthread_rwlock_init(rwlock, NULL);
+
+    if ((result = pthread_mutex_lock(&rwlock->rw_mutex)) != 0)
+        return result;
+
+    if (rwlock->rw_refcount != 0)
+        result = EBUSY;             /* held by either writer or reader */
+    else
+        rwlock->rw_refcount = -1;   /* available, indicate a writer has it */
+
+    pthread_mutex_unlock(&rwlock->rw_mutex);
+
+    return result;
 }
