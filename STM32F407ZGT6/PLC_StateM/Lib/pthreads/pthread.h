@@ -14,7 +14,7 @@
 
 #include <rtthread.h>
 #include "rthw.h"
-#include "libc_errno.h"
+#include <errno.h>
 #include "sys/types.h"
 #include "sys/time.h"
 
