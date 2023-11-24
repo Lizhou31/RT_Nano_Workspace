@@ -76,10 +76,10 @@ Core/Src/system_stm32f4xx.c \
 ../../modules/rtthread-nano/rt-thread/components/finsh/cmd.c \
 ../../modules/rtthread-nano/rt-thread/compoenets/finsh/msh.c \
 ../../modules/rtthread-nano/rt-thread/components/finsh/shell.c \
+../../modules/rtthread-nano/rt-thread/components/Unity/src/unity.c \
 Lib/pthreads/pthread_mutex.c \
 Lib/pthreads/pthread_cond.c \
 Lib/pthreads/pthread_rwlock.c \
-Lib/Unity/src/unity.c \
 Lib/test/src/base_test.c \
 Lib/test/src/test_pthread_mutex.c \
 Lib/test/src/test_pthread_condition_variable.c \
@@ -153,9 +153,9 @@ C_INCLUDES =  \
 -I../../modules/rtthread-nano/rt-thread/include \
 -I../../modules/rtthread-nano/rt-thread/include/libc \
 -I../../modules/rtthread-nano/rt-thread/components/finsh \
+-I../../modules/rtthread-nano/rt-thread/components/Unity/inc \
 -ILib/pthreads/ \
 -ILib/pthreads/libc/ \
--ILib/Unity/src \
 -ILib/test/inc \
 -Ibsp/Inc
 
