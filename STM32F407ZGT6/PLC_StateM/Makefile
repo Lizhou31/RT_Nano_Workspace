@@ -77,6 +77,7 @@ Core/Src/system_stm32f4xx.c \
 ../../modules/rtthread-nano/rt-thread/compoenets/finsh/msh.c \
 ../../modules/rtthread-nano/rt-thread/components/finsh/shell.c \
 ../../modules/rtthread-nano/rt-thread/components/Unity/src/unity.c \
+../../modules/rtthread-nano/rt-thread/components/utiity/ringbuffer/src/ringbuffer.c \
 Lib/pthreads/pthread_mutex.c \
 Lib/pthreads/pthread_cond.c \
 Lib/pthreads/pthread_rwlock.c \
@@ -85,7 +86,6 @@ Lib/test/src/test_pthread_mutex.c \
 Lib/test/src/test_pthread_condition_variable.c \
 Lib/test/src/test_pthread_rwlock.c \
 bsp/Src/board.c \
-bsp/Src/ringbuffer.c \
 Core/Src/gpio.c \
 Core/Src/usart.c
 
@@ -154,6 +154,7 @@ C_INCLUDES =  \
 -I../../modules/rtthread-nano/rt-thread/include/libc \
 -I../../modules/rtthread-nano/rt-thread/components/finsh \
 -I../../modules/rtthread-nano/rt-thread/components/Unity/inc \
+-I../../modules/rtthread-nano/rt-thread/components/utiity/ringbuffer/inc \
 -ILib/pthreads/ \
 -ILib/pthreads/libc/ \
 -ILib/test/inc \
